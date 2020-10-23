@@ -1,0 +1,19 @@
+/** {{.TableComment}} {{.TableName}} */
+const {{.TableName}} = [{{range .TableSchema}}
+  {
+    name: {{.ColumnName | Tags3}},
+    field: {{.ColumnName | Tags3}},
+    label: {{.ColumnComment | ExportLabel}},
+    sortable: true,
+    align: "center",
+    classes: "",
+    style: "",
+    type: {{.DataType | ExportLabel}},
+  },{{end}}
+]
+
+const {{.TableName}}_v = [{{range .TableSchema}}
+  {{.ColumnName | Tags3}}, {{end}}]
+
+export default {{.TableName}};
+export { {{.TableName}}_v, {{.TableName}} };

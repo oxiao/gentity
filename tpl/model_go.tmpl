@@ -1,0 +1,15 @@
+package {{.PackageName}}
+
+import (
+	"time"
+)
+
+/** {{.TableComment}} {{.TableName}} */
+type {{.ExportModelName}} struct {
+// Model
+{{range .TableSchema}} {{.ColumnName | ExportColumn}} {{.DataType | TypeConvert}} {{. | Tags}} // {{.ColumnComment}}
+{{end}}}
+
+func (t *{{.ExportModelName}}) TableName() string {
+	return "{{.TableName}}"
+}
