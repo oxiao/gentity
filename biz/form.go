@@ -33,13 +33,13 @@ func (me *MainWindow) layout()  {
 	vb := widgets.NewQVBoxLayout()
 	me.txtServer, hb = me.newEdit("地址", "")
 	vb.AddLayout(hb, 0)
-	me.txtServer, hb = me.newEdit("端口", "")
+	me.txtPort, hb = me.newEdit("端口", "")
 	vb.AddLayout(hb, 0)
-	me.txtServer, hb = me.newEdit("库名", "")
+	me.txtDb, hb = me.newEdit("库名", "")
 	vb.AddLayout(hb, 0)
-	me.txtServer, hb = me.newEdit("用户", "")
+	me.txtUser, hb = me.newEdit("用户", "")
 	vb.AddLayout(hb, 0)
-	me.txtServer, hb = me.newEdit("密码", "")
+	me.txtPwd, hb = me.newEdit("密码", "")
 	vb.AddLayout(hb, 0)
 
 	gp := widgets.NewQGroupBox(me)
@@ -100,14 +100,7 @@ func (me *MainWindow) newEdit(label, text string) (*widgets.QLineEdit, *widgets.
 }
 
 func (me *MainWindow) load() {
-	mp := "app.ini"
-	mp = getPath(mp)
-	if !file.FileExists(mp) {
-		fl, _ := file.Open(mp, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0644)
-		fl.Close()
-	}
-
-	me.cfg, _ = ini.Load(mp)
+	me.cfg, _ = ini.Load(getIniFile())
 	me.txtServer.SetText(me.cfg.Section("db").Key("server").String())
 	me.txtPort.SetText(me.cfg.Section("db").Key("port").String())
 	me.txtDb.SetText(me.cfg.Section("db").Key("db").String())
@@ -141,6 +134,7 @@ func (me *MainWindow) save() {
 		chk = "1"
 	}
 	me.cfg.Section("model").Key("js").SetValue(chk)
+	me.cfg.SaveTo(getIniFile())
 }
 
 func (me *MainWindow) onOk(checked bool) {
@@ -171,6 +165,15 @@ func (me *MainWindow) onOk(checked bool) {
 	}
 }
 
+func getIniFile() string {
+	mp := "app.ini"
+	mp = getPath(mp)
+	if !file.FileExists(mp) {
+		fl, _ := file.Open(mp, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0644)
+		fl.Close()
+	}
+	return mp
+}
 func getPath(name string) string {
 	mp, _ := filepath.Abs(filepath.Dir(os.Args[0]))
 	mp = filepath.Join(mp, name)
