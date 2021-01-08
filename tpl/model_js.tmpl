@@ -1,19 +1,29 @@
-/** {{.TableComment}} {{.TableName}} */
-const {{.TableName}} = [{{range .TableSchema}}
+/** {{md.TableComment}} {{md.TableName}} */
+const {{md.TableName}} = { {% for col in md.Columns %}
+  {{col.Name}}:'', // {{col.Comment}} {{col.SQLType.Name}} {{linebreaks}}
+  {% endfor %}
+   }
+  
+const {{md.TableName}}_v = [{% for col in  md.Columns%}
+  {{col.Name}}, {% endfor %}]
+
+const {{md.TableName}} = [{% for col in md.Columns %}
+  { name: '{{col.Name}}', text: '{{col.Comment}}', sortable: true, align: 'center', type: '{{col.SQLType.Name | lower}}', },  {{linebreaks}}
+  {% endfor %}
+]
+  
+const {{md.TableName}} = [{% for col in  md.Columns%}
   {
-    name: {{.ColumnName | Tags3}},
-    field: {{.ColumnName | Tags3}},
-    label: {{.ColumnComment | ExportLabel}},
+    name: '{{col.Name}}',
+    field: '{{col.Name}}',
+    label: '{{col.Comment}}',
     sortable: true,
-    align: "center",
-    classes: "",
-    style: "",
-    type: {{.DataType | ExportLabel}},
-  },{{end}}
+    align: 'center',
+    classes: '',
+    style: '',
+    type: '{{col.SQLType.Name}},
+  },{% endfor %}
 ]
 
-const {{.TableName}}_v = [{{range .TableSchema}}
-  {{.ColumnName | Tags3}}, {{end}}]
-
-export default {{.TableName}};
-export { {{.TableName}}_v, {{.TableName}} };
+export default {{md.TableName}};
+export { {{md.TableName}}_v, {{md.TableName}} };

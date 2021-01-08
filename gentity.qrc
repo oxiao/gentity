@@ -1,0 +1,7 @@
+<!DOCTYPE RCC>
+<RCC version="1.0">
+    <qresource>
+        <file>assets/box_closed.png</file>
+        <file>assets/icon.ico</file>
+    </qresource>
+</RCC>

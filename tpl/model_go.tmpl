@@ -1,15 +1,16 @@
-package {{.PackageName}}
+package {{md.PackageName}}
 
 import (
 	"time"
 )
 
-/** {{.TableComment}} {{.TableName}} */
-type {{.ExportModelName}} struct {
+/** {{md.TableComment}} {{md.TableName}} */
+type {{md.ExportModelName}} struct {
 // Model
-{{range .TableSchema}} {{.ColumnName | ExportColumn}} {{.DataType | TypeConvert}} {{. | Tags}} // {{.ColumnComment}}
-{{end}}}
+{% for col in md.Columns %}
+    {{ExportColumn(col.Name)}} {{TypeConvert(col.SQLType)}} `xorm:"{{col.SQLType.Name | lower}}{% if col.Length > 0 %}({{col.Length}}){% endif %} {% if not col.Nullable %} notnull {% endif %} {% if not col.IsPrimaryKey %} unique {% endif %} '{{col.Name}}'"` // {{col.Comment}}
+{% endfor %}}
 
-func (t *{{.ExportModelName}}) TableName() string {
-	return "{{.TableName}}"
+func (t *{{md.ExportModelName}}) TableName() string {
+	return "{{md.TableName}}"
 }

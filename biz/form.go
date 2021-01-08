@@ -14,6 +14,7 @@ type MainWindow struct {
 	_ func() `constructor:"init"`
 	//_ func() `signal:"layout,auto"`
 
+	dlDbms *widgets.QComboBox
 	txtServer, txtPort, txtDb, txtUser, txtPwd, txtPkg,txtTable *widgets.QLineEdit
 	cbxGo, cbxJs *widgets.QCheckBox
 	btnOk, btnCancel *widgets.QPushButton
@@ -31,6 +32,16 @@ func (me *MainWindow) layout()  {
 		hb *widgets.QHBoxLayout
 	)
 	vb := widgets.NewQVBoxLayout()
+
+	me.dlDbms = widgets.NewQComboBox(me)
+	me.dlDbms.AddItems([]string{"mysql", "sqlserver", "oracle", "postgres"})
+	lbl := widgets.NewQLabel2("类型", me, 0)
+	lbl.SetBuddy(me.dlDbms)
+	lyt := widgets.NewQHBoxLayout()
+	lyt.AddWidget(lbl, 0, 0)
+	lyt.AddWidget(me.dlDbms, 0, 0)
+	vb.AddLayout(lyt, 0)
+
 	me.txtServer, hb = me.newEdit("地址", "")
 	vb.AddLayout(hb, 0)
 	me.txtPort, hb = me.newEdit("端口", "")
@@ -78,7 +89,7 @@ func (me *MainWindow) layout()  {
 	ml.AddLayout(mvr, 0)
 
 	me.SetLayout(ml)
-	me.SetWindowTitle("模型文件生成器")
+	me.SetWindowTitle("MySQL模型文件生成器")
 
 	me.btnOk.ConnectClicked(me.onOk)
 	me.btnCancel.ConnectClicked(func(checked bool) {
@@ -138,6 +149,7 @@ func (me *MainWindow) save() {
 }
 
 func (me *MainWindow) onOk(checked bool) {
+	dbms := me.dlDbms.CurrentText()
 	dbName := me.txtDb.Text()
 	user := me.txtUser.Text()
 	password := me.txtPwd.Text()
@@ -147,22 +159,33 @@ func (me *MainWindow) onOk(checked bool) {
 	importName := me.txtPkg.Text()
 	tableName := me.txtTable.Text()
 
-	err := DBInit(dbName, user, password, host, port)
+	var (
+		err error
+		dlg *widgets.QMessageBox
+	)
+	err = DBInit(dbms, dbName, user, password, host, port)
 	if err != nil {
-
-		dlg := widgets.NewQMessageBox2(widgets.QMessageBox__Warning, "出错了", fmt.Sprintf("%s", err), widgets.QMessageBox__Ok, me, core.Qt__Dialog)
+		fmt.Print(err)
+		dlg = widgets.NewQMessageBox2(widgets.QMessageBox__Warning, "出错了", fmt.Sprintf("%s", err), widgets.QMessageBox__Ok, me, core.Qt__Dialog)
 		dlg.Show()
+		return
 	}
 	if me.cbxGo.IsChecked() {
 		err = ModelGenerate(importName, tableName, getPath("./tpl/model_go.tmpl"))
+		fmt.Print(err)
 	}
 	if me.cbxJs.IsChecked() {
 		err = ModelGenerate(importName, tableName, getPath("./tpl/model_js.tmpl"))
+		fmt.Print(err)
 	}
+
 	if err != nil {
-		dlg := widgets.NewQMessageBox2(widgets.QMessageBox__Information, "执行成功", "文件生成成功！", widgets.QMessageBox__Ok, me, core.Qt__Dialog)
-		dlg.Show()
+		fmt.Print(err)
+		dlg = widgets.NewQMessageBox2(widgets.QMessageBox__Information, "出错了", fmt.Sprintf("%s", err), widgets.QMessageBox__Ok, me, core.Qt__Dialog)
+	} else {
+		dlg = widgets.NewQMessageBox2(widgets.QMessageBox__Information, "执行成功", "文件生成成功！", widgets.QMessageBox__Ok, me, core.Qt__Dialog)
 	}
+	dlg.Show()
 }
 
 func getIniFile() string {

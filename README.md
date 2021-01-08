@@ -1,1 +1,3 @@
 # gentity
+
+qtdeploy build 

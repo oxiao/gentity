@@ -1,26 +1,8 @@
-/*
- *
- *
- *  * Copyright 2019 koalaone@163.com
- *  *
- *  * Licensed under the Apache License, Version 2.0 (the "License");
- *  * you may not use this file except in compliance with the License.
- *  * You may obtain a copy of the License at
- *  *
- *  *       http://www.apache.org/licenses/LICENSE-2.0
- *  *
- *  * Unless required by applicable law or agreed to in writing, software
- *  * distributed under the License is distributed on an "AS IS" BASIS,
- *  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  * See the License for the specific language governing permissions and
- *  * limitations under the License.
- *
- */
 
 package biz
 
 import (
-	"fmt"
+	"github.com/xormplus/core"
 	"html/template"
 	"strings"
 )
@@ -34,33 +16,6 @@ func ExportLabel(columnName string) template.HTML {
 
 func Tags1(columnName string) template.HTML {
 	return template.HTML("`json:\"" + columnName + "\"`")
-}
-func Tags(column TableSchema) template.HTML {
-	pk := ""
-	idx := ""
-	if column.ColumnKey == "PRI" {
-		pk = ";primary_key"
-		idx = "sql:\"unique_index\" "
-	}
-
-	//sql:"index" gorm:"type:int(11);primary key" json:"pid"
-	gormStr := fmt.Sprintf("`%sgorm:\"type:%s%s\" json:\"%s\"`", idx, column.ColumnType, pk, column.ColumnName)
-
-	//fmt.Println(gormStr)
-	return template.HTML(gormStr)
-}
-func Tags2(column TableSchema) template.HTML {
-	pk := ""
-	idx := ""
-	if column.ColumnKey == "PRI" {
-		pk = ";unique;unique_index;not null"
-	}
-
-	//sql:"index" gorm:"type:int(11);primary key" json:"pid"
-	gormStr := fmt.Sprintf("`%sgorm:\"type:%s%s\" json:\"%s\"`", idx, column.ColumnType, pk, column.ColumnName)
-
-	//fmt.Println(gormStr)
-	return template.HTML(gormStr)
 }
 
 func Unescaped(x string) interface{} {
@@ -104,9 +59,9 @@ func ExportColumn(columnName string) string {
 
 }
 
-func TypeConvert(str string) string {
+func TypeConvert(st core.SQLType) string {
 
-	switch str {
+	switch st.Name {
 	case "smallint", "tinyint":
 		return "int8"
 
@@ -135,7 +90,7 @@ func TypeConvert(str string) string {
 		return "gocql.UUID"
 
 	default:
-		return str
+		return st.Name
 	}
 }
 
@@ -143,10 +98,11 @@ func Join(a []string, sep string) string {
 	return strings.Join(a, sep)
 }
 
-func ColumnAndType(table_schema []TableSchema) string {
+func ColumnAndType(table_schema []*core.Column) string {
 	result := make([]string, 0, len(table_schema))
 	for _, t := range table_schema {
-		result = append(result, t.ColumnName+" "+TypeConvert(t.DataType))
+		result = append(result, t.Name+" "+TypeConvert(t.SQLType))
+		//t.SQLType.DefaultLength
 	}
 	return strings.Join(result, ",")
 }
