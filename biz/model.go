@@ -1,34 +1,36 @@
 package biz
 
 import (
-	"fmt"
+	"cqccteg.hlw/up/common/logging"
 	"github.com/oxiao/pongo2"
 	"github.com/xormplus/core"
 	"github.com/xormplus/xorm"
 	"io/ioutil"
-	"log"
 	"os"
-	"sumery.dev/common/logging"
 
 	//"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
 
-	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/denisenkom/go-mssqldb"
+	_ "github.com/go-sql-driver/mysql"
 )
 
 var (
 	db     *xorm.Engine
 	DbName string
-	tbls   []core.Table
+	tbls   []*core.Table
 )
 
 func DBInit(dbms, dbName, user, password, host, port string) (err error) {
 	conn_str := user + ":" + password + "@tcp(" + host + ":" + port + ")/" + dbName + "?charset=utf8mb4&parseTime=True"
+	if dbms == "mssql" {
+		conn_str = "sqlserver://" + user + ":" + password + "@" + host + ":" + port + "?database=" + dbName + ""
+	}
 	db, err = xorm.NewEngine(dbms, conn_str)
 	if err != nil {
+		logging.Err(err)
 		return err
 	}
 
@@ -38,14 +40,14 @@ func DBInit(dbms, dbName, user, password, host, port string) (err error) {
 }
 
 func ModelGenerate(importName, tableName string, tplFile string) error {
-
-	if ls, err := db.DBMetas(); nil == err {
-		tbls = make([]core.Table, 0, len(ls))
+	ls, err := db.DBMetas()
+	if nil == err {
+		tbls = make([]*core.Table, 0, len(ls))
 		for _, tb := range ls {
-			tbls = append(tbls, *tb)
+			tbls = append(tbls, tb)
 		}
 	} else {
-		logging.Error(err)
+		logging.Err(err)
 	}
 
 	//modelData, err := ioutil.ReadFile(tplFile)
@@ -56,7 +58,7 @@ func ModelGenerate(importName, tableName string, tplFile string) error {
 
 	render, err := pongo2.FromFile(tplFile)
 	if err != nil {
-		fmt.Println("read tplFile err:", err)
+		logging.Error("read tplFile err:", err)
 		return err
 	}
 
@@ -82,24 +84,28 @@ func ModelGenerate(importName, tableName string, tplFile string) error {
 	for _, table := range tbls {
 		nameStr = nameStr + "&" + HumpStructName(table.Name) + "{}, "
 		if (tableName == "") || (tableName != "" && tableName == table.Name) {
-			err := genModelFile(render, importName, &table, fileType)
+			//go func() {
+			//	genModelFile(render, importName, &table, fileType)
+			//}()
+			err := genModelFile(render, importName, table, fileType)
 			if err != nil {
-				fmt.Println("genModelFile err:", err)
-				return err
+				logging.Error("genModelFile err:", err)
+				continue
 			}
 		}
 	}
-
+	//db.DumpTablesToFile(ls, getPath("all_tables.txt"))
 	// write all model names to a single file
 	err = ioutil.WriteFile("model_list.txt", []byte(nameStr), 0666)
 	if err != nil {
-		fmt.Println("WriteFile model_list.txt err:", err)
+		logging.Error("WriteFile model_list.txt err:", err)
 	}
 
 	return nil
 }
 
 type ModelInfo struct {
+	*core.Table
 	BDName          string
 	DBConnection    string
 	TableName       string
@@ -122,7 +128,7 @@ func genModelFile(render *pongo2.Template, importName string, table *core.Table,
 	if !IsExist(dirPath) {
 		err := os.MkdirAll(dirPath, os.ModePerm)
 		if err != nil {
-			fmt.Println(err)
+			logging.Err(err)
 			return err
 		}
 	}
@@ -131,7 +137,7 @@ func genModelFile(render *pongo2.Template, importName string, table *core.Table,
 	if IsExist(fileName) {
 		err := os.Remove(fileName)
 		if err != nil {
-			fmt.Println(err)
+			logging.Err(err)
 			return err
 		}
 	}
@@ -144,6 +150,7 @@ func genModelFile(render *pongo2.Template, importName string, table *core.Table,
 	//defer f.Close()
 
 	model := &ModelInfo{
+		Table:           table,
 		ImportName:      importName,
 		PackageName:     packageName,
 		BDName:          DbName,
@@ -164,16 +171,17 @@ func genModelFile(render *pongo2.Template, importName string, table *core.Table,
 		"ColumnWithPostfix":    ColumnWithPostfix,
 		"Tags3":                Tags3,
 		"ExportLabel":          ExportLabel,
-		"md":                model,
+		"md":                   model,
 	}
 	render.Options.TrimBlocks = true
 	render.Options.LStripBlocks = true
 
 	if str, err := render.Execute(ctx); err != nil {
-		log.Fatal(err)
+		logging.Err(err)
 		return err
 	} else {
 		if err = ioutil.WriteFile(fileName, []byte(str), 0666); nil != err {
+			logging.Err(err)
 			return err
 		}
 	}

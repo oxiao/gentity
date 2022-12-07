@@ -1,6 +1,6 @@
 /** {{md.TableComment}} {{md.TableName}} */
 const {{md.TableName}} = { {% for col in md.Columns %}
-  {{col.Name}}:'', // {{col.Comment}} {{col.SQLType.Name}} {{linebreaks}}
+  {{col.Name}}:'', // {{col.Comment}} {{col.SQLType.Name|lower}} {{linebreaks}}
   {% endfor %}
    }
   
@@ -21,7 +21,7 @@ const {{md.TableName}} = [{% for col in  md.Columns%}
     align: 'center',
     classes: '',
     style: '',
-    type: '{{col.SQLType.Name}},
+    type: '{{col.SQLType.Name|lower}},
   },{% endfor %}
 ]
 

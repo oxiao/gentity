@@ -60,8 +60,8 @@ func ExportColumn(columnName string) string {
 }
 
 func TypeConvert(st core.SQLType) string {
-
-	switch st.Name {
+	nm := strings.ToLower(st.Name)
+	switch nm {
 	case "smallint", "tinyint":
 		return "int8"
 
