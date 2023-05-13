@@ -1,0 +1,29 @@
+{# for flutter getx #}
+/// {{md.TableComment}} {{md.TableName}} {{md.Table.Name}}
+class {{md.ExportModelName}} {
+// Model
+{% for col in md.Columns %}
+	// {{col.Comment}} {{col.SQLType.Name | lower}}{% if col.Length > 0 %}({{col.Length}}){% endif %} {% if not col.Nullable %} notnull {% endif %} {% if not col.IsPrimaryKey %} unique {% endif %}
+	
+	{{FirstCharUpper(TypeConvert(col.SQLType))}} {{col.Name}};
+{% endfor %}
+	
+	{{md.ExportModelName}}({% for col in md.Columns %}this.{{col.Name}},{% endfor %});
+	
+	{{md.ExportModelName}}.fromJson(Map<String, dynamic> json) :
+	{% for col in md.Columns %}
+		this.{{col.Name}} = json['{{col.Name}}'],
+		{% endfor %};
+	
+	
+	Map<String, dynamic> toJson() {
+		final Map<String, dynamic> data = new Map<String, dynamic>();
+		
+		{% for col in md.Columns %}
+		data['{{col.Name}}'] = this.{{col.Name}};
+		{% endfor %}
+		
+		return data;
+	}
+
+}

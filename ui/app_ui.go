@@ -11,7 +11,7 @@ import (
 )
 
 const CFG_NAME = "gentity_cfg"
-const VERSION = "V1.0.0-20221207-YaoGL"
+const VERSION = "V1.0.1-20221207-YaoGL"
 
 var (
 	application fyne.App
@@ -28,6 +28,7 @@ func Run() {
 	}
 	win = application.NewWindow("模型文件生成器 " + VERSION)
 	win.Resize(fyne.NewSize(400, 500))
+	win.SetFixedSize(true)
 	cfg := GetCfg()
 	fm := NewFormUI()
 

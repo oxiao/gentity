@@ -21,8 +21,7 @@ type FormConfig struct {
 	Pwd    string `json:"pwd"`
 	Pkg    string `json:"pkg"`
 	Table  string `json:"table"`
-	Go     bool   `json:"go"`
-	Js     bool   `json:"js"`
+	Tpl    string `json:"tpl"`
 }
 
 type FormUI struct {
@@ -34,8 +33,7 @@ type FormUI struct {
 	pwd    *widget.Entry
 	pkg    *widget.Entry
 	table  *widget.Entry
-	goo    *widget.Check
-	js     *widget.Check
+	tpl    *widget.Entry
 }
 
 func NewFormUI() *FormUI {
@@ -48,12 +46,7 @@ func NewFormUI() *FormUI {
 		pwd:    widget.NewPasswordEntry(),
 		pkg:    widget.NewEntry(),
 		table:  widget.NewEntry(),
-		goo: widget.NewCheck("", func(b bool) {
-
-		}),
-		js: widget.NewCheck("", func(b bool) {
-
-		}),
+		tpl:    widget.NewEntry(),
 	}
 
 	fui.dbms.SetPlaceHolder("选择数据库系统名称")
@@ -63,6 +56,7 @@ func NewFormUI() *FormUI {
 	fui.user.SetPlaceHolder("数据库访问账号")
 	fui.pwd.SetPlaceHolder("数据库账号密码")
 	fui.pkg.SetPlaceHolder("要生成的源代码包的名称")
+	fui.tpl.SetPlaceHolder("模板文件所在目录")
 
 	return &fui
 }
@@ -77,8 +71,7 @@ func (me *FormUI) Build(fc *FormConfig) fyne.CanvasObject {
 		fc.Pwd = me.pwd.Text
 		fc.Pkg = me.pkg.Text
 		fc.Table = me.table.Text
-		fc.Go = me.goo.Checked
-		fc.Js = me.js.Checked
+		fc.Tpl = me.tpl.Text
 	}
 
 	fm := widget.NewForm(
@@ -88,18 +81,20 @@ func (me *FormUI) Build(fc *FormConfig) fyne.CanvasObject {
 		&widget.FormItem{Text: "数据库:", Widget: me.db},
 		&widget.FormItem{Text: "用户:", Widget: me.user},
 		&widget.FormItem{Text: "密码:", Widget: me.pwd},
-		&widget.FormItem{Text: "包名:", Widget: me.pkg},
-		&widget.FormItem{Text: "生成js文件:", Widget: me.js},
-		&widget.FormItem{Text: "生成Go文件:", Widget: me.goo},
 	)
-	fm.CancelText = "退出"
-	fm.SubmitText = "生成"
-	fm.OnSubmit = func() {
+
+	fm1 := widget.NewForm(
+		&widget.FormItem{Text: "包名:", Widget: me.pkg},
+		&widget.FormItem{Text: "模板文件目录:", Widget: me.tpl},
+	)
+	fm1.CancelText = "退出"
+	fm1.SubmitText = "生成"
+	fm1.OnSubmit = func() {
 		fun()
 		SetCfg(fc)
 		me.onOk()
 	}
-	fm.OnCancel = func() {
+	fm1.OnCancel = func() {
 		fun()
 		SetCfg(fc)
 		win.Close()
@@ -114,17 +109,19 @@ func (me *FormUI) Build(fc *FormConfig) fyne.CanvasObject {
 	me.pwd.SetText(fc.Pwd)
 	me.pkg.SetText(fc.Pkg)
 	me.table.SetText(fc.Table)
-	me.goo.SetChecked(fc.Go)
-	me.js.SetChecked(fc.Js)
+	me.tpl.SetText(fc.Tpl)
 
 	card := widget.NewCard("数据库信息", "", fm)
-	return container.NewVScroll(card)
+	card1 := widget.NewCard("生成代码信息", "", fm1)
+	vs := container.NewVBox(card, card1)
+	return vs
 }
 func (me *FormUI) onOk() {
 
 	var (
 		err error
 		dlg dialog.Dialog
+		lst []os.DirEntry
 	)
 	err = biz.DBInit(me.dbms.Text,
 		me.db.Text,
@@ -138,29 +135,52 @@ func (me *FormUI) onOk() {
 		dlg.Show()
 		return
 	}
-	if me.goo.Checked {
-		err = biz.ModelGenerate(me.pkg.Text,
-			me.table.Text,
-			getPath("./tpl/model_go.tmpl"))
-		logging.Err(err)
-	}
-	if me.js.Checked {
-		err = biz.ModelGenerate(me.pkg.Text,
-			me.table.Text,
-			getPath("./tpl/model_js.tmpl"))
-		logging.Err(err)
-	}
 
-	if err != nil {
-		logging.Err(err)
-		dlg = dialog.NewError(err, win)
+	if lst, err = os.ReadDir(me.tpl.Text); err == nil {
+		for _, fl := range lst {
+			if fl.IsDir() {
+				continue
+			}
+			tpl := filepath.Join(me.tpl.Text, fl.Name())
+			logging.Info("now generating ", tpl)
+			if err = biz.ModelGenerate(me.pkg.Text, me.table.Text, tpl); err != nil {
+				goto BAD
+			}
+		}
+		goto GOOD
 	} else {
-		dlg = dialog.NewInformation("执行成功", "文件生成成功！", win)
+		goto BAD
 	}
+	//if me.goo.Checked {
+	//	err = biz.ModelGenerate(me.pkg.Text,
+	//		me.table.Text,
+	//		getPath("./tpl/model_go.tmpl"))
+	//	logging.Err(err)
+	//}
+	//if me.js.Checked {
+	//	err = biz.ModelGenerate(me.pkg.Text,
+	//		me.table.Text,
+	//		getPath("./tpl/model_js.tmpl"))
+	//	logging.Err(err)
+	//}
+	//if me.dart.Checked {
+	//	err = biz.ModelGenerate(me.pkg.Text,
+	//		me.table.Text,
+	//		getPath("./tpl/model_dart.tmpl"))
+	//	logging.Err(err)
+	//}
+
+BAD:
+	logging.Err(err)
+	dlg = dialog.NewError(err, win)
+GOOD:
+	dlg = dialog.NewInformation("执行成功", "文件生成成功！", win)
+
 	dlg.Show()
 }
-func getPath(name string) string {
-	mp, _ := filepath.Abs(filepath.Dir(os.Args[0]))
+func getPath(path, name string) string {
+	//mp, _ := filepath.Abs(filepath.Dir(os.Args[0]))
+	mp, _ := filepath.Abs(filepath.Dir(path))
 	mp = filepath.Join(mp, name)
 	return mp
 }
